@@ -1,0 +1,346 @@
+<?php
+
+/**
+ * @file
+ * Short file description here.
+ *
+ * Long description here.
+ */
+
+define('MCDOOLZ_SOCIAL_NETWORKS',
+'500px amazon android angellist apple bandcamp behance bitbucket bitcoin buysellads codepen codiepie connectdevelop dashcube delicious deviantart digg dribbble dropbox drupal edge eercast empire envira etsy expeditedssl facebook firefox first-order flickr forumbee foursquare gg git github gitlab glide google gratipay grav houzz imdb instagram jsfiddle lastfm leanpub linkedin linode linux maxcdn meanpath medium meetup mixcloud openid paypal pinterest quora ravelry rebel reddit renren scribd sellsy shirtsinbulk simplybuilt skyatlas skype slack slideshare snapchat soundcloud spotify steam stumbleupon superpowers telegram trello tripadvisor tumblr twitch twitter viacoin viadeo vimeo vine vk weibo weixin whatsapp xing yahoo yelp yoast youtube'
+);
+
+/**
+ * Helper returns divided up string of networks into array.
+ */
+function _mcdoolz_social_networks() {
+  return explode(' ', MCDOOLZ_SOCIAL_NETWORKS);
+}
+
+/**
+ * Implements hook_menu().
+ */
+function mcdoolz_social_menu() {
+  $items['admin/config/user-interface'] = array(
+    'title' => 'Social Links',
+    'page callback' => 'mcdoolz_social_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Invokes hook_page().
+ */
+function mcdoolz_social_page() {
+  $form = drupal_get_form('mcdoolz_social_block_configure_form');
+  return $form;
+}
+
+/**
+ * Implements hook_block_info().
+ *
+ * This hook declares what blocks are provided by the module.
+ */
+function mcdoolz_social_block_info() {
+  $blocks['mcdoolz_social'] = array(
+    'info' => t('Social Networks'),
+    'cache' => DRUPAL_CACHE_PER_ROLE,
+  );
+  return $blocks;
+}
+
+/**
+ * Invokes hook_form().
+ */
+function mcdoolz_social_block_configure_form($form, &$form_state) {
+  if (!empty($form_state['values'])) {
+    $links = $form_state['values']['mcdoolz_social_links'];
+  }
+  else {
+    $links = serialize(array(
+      array('link' => 'facebook.com', 'weight' => 10),
+      array('link' => 'twitter.com', 'weight' => -10)
+    ));
+    $links = variable_get('mcdoolz_social_links', $links);
+    $links = unserialize($links);
+  }
+
+  $form['mcdoolz_social_iconpack'] = array(
+    '#weight' => 0,
+    '#title' => 'Iconpack',
+    '#description' => 'Select the icon pack you wish to use.',
+    '#type' => 'select',
+    '#options' => array(
+      'fontawesome' => 'Font Awesome',
+    ),
+    '#default_value' => variable_get('mcdoolz_social_iconpack', 'fontawesome'),
+  );
+
+  $form['mcdoolz_social_display'] = array(
+    '#weight' => 0,
+    '#title' => 'Display',
+    '#description' => 'How do you wish your networks displayed?',
+    '#type' => 'radios',
+    '#options' => array(
+      '0' => 'No Icons',
+      '1' => 'Just Icons',
+      '2' => 'Both Words and Icons',
+    ),
+    '#default_value' => variable_get('mcdoolz_social_display', '1'),
+  );
+
+  // Prefix and Suffix provide our AJAX wrapper.
+  $form['mcdoolz_social_links'] = array(
+    '#tree' => TRUE,
+    '#type' => 'container',
+    '#prefix' => '<div id="social_links">',
+    '#suffix' => '</div>',
+    '#theme' => 'mcdoolz_social_table_drag_components',
+    '#description' => 'Select the icon pack you wish to use.',
+  );
+
+  if (!empty($links)) {
+    for ($i = 0; $i !== (count($links) + 1); $i++) {
+      $form['mcdoolz_social_links'][] = array(
+        'link' => array(
+          '#title' => 'Social Network',
+          '#title_display' => 'invisible',
+          '#type' => 'textfield',
+          '#default_value' => (!empty($links[$i])) ? check_plain($links[$i]['link']) : '',
+        ),
+        'weight' => array(
+          '#size' => 3,
+          '#title' => t('Weight'),
+          '#delta' => 10,
+          '#title_display' => 'invisible',
+          '#attributes' => array(
+            'class' => array('item-row-weight')
+          ),
+          '#type' => 'textfield',
+          '#default_value' => (!empty($links[$i])) ? $links[$i]['weight'] : 0,
+        ),
+      );
+    }
+  }
+
+  $form['add_social_link'] = array(
+    '#type' => 'button',
+    '#value' => t('Add a Social Link'),
+    '#href' => '',
+    '#ajax' => array(
+      'callback' => 'mcdoolz_social_ajax_add_social_link',
+      'wrapper' => 'social_links',
+    ),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save Configuration'),
+    '#submit' => array('mcdoolz_social_block_configure_form_submit'),
+  );
+
+  return $form;
+}
+
+/**
+ * Invokes ajax stuff.
+ */
+function mcdoolz_social_ajax_add_social_link($form, &$form_state) {
+  return $form['mcdoolz_social_links'];
+}
+
+/**
+ * Implements hook_theme().
+ */
+function mcdoolz_social_theme($existing, $type, $theme, $path) {
+  $themes = array(
+    'mcdoolz_social_table_drag_components' => array(
+      'render element' => 'element'
+    ),
+    'mcdoolz_social_block' => array(
+      'template' => 'mcdoolz_social_block',
+    ),
+  );
+  return $themes;
+}
+
+/**
+ * Themes the sortable, draggable table.
+ */
+function theme_mcdoolz_social_table_drag_components($vars) {
+  $element = $vars['element'];
+  drupal_add_tabledrag('mcdoolz_social_links', 'order', 'sibling', 'item-row-weight');
+
+  $header = array(
+    'link' => t('Social Network URL'),
+    'weight' => t('Weight'),
+  );
+
+  $rows = array();
+  foreach (element_children($element) as $key) {
+    $row = array();
+    $row['data'] = array();
+    foreach ($header as $fieldname => $title) {
+      $row['data'][] = drupal_render($element[$key][$fieldname]);
+      $row['class'] = array('draggable');
+    }
+    $rows[] = $row;
+  }
+
+  return theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => 'mcdoolz_social_links'),
+  ));
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ * This hook generates the contents of the blocks themselves.
+ */
+function mcdoolz_social_block_view($delta = '') {
+  // The $delta parameter tells us which block is being requested.
+  switch ($delta) {
+    case 'mcdoolz_social':
+      $block['subject'] = t('Social Networks');
+      $block['content'] = _mcdoolz_social_contents($block);
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Returns numeric setting as string description.
+ */
+function _mcdoolz_social_displaymode() {
+  $displaymode = variable_get('mcdoolz_social_display', '2');
+  switch ($displaymode) {
+    case 0:
+      $displaymode = 'label';
+      break;
+
+    default:
+    case 1:
+      $displaymode = 'icons';
+      break;
+
+    case 2:
+      $displaymode = 'both';
+      break;
+  }
+  return $displaymode;
+}
+
+/**
+ * Returns iconpack as class string.
+ *
+ * TODO: Return array that breaks apart based on iconpack.
+ */
+function _mcdoolz_social_iconpack() {
+  $iconpack = variable_get('mcdoolz_social_iconpack', 'fontawesome');
+  switch ($iconpack) {
+    case 'fontawesome':
+      $iconpack = 'fa';
+      break;
+  }
+  return $iconpack;
+}
+
+/**
+ * A module-defined block content function.
+ */
+function _mcdoolz_social_contents($block) {
+  $links = unserialize(variable_get('mcdoolz_social_links', NULL));
+  usort($links, '_sort_by_weight');
+  if (empty($links)) {
+    return array(
+      '#markup' => t("You need to configure your social networks.")
+    );
+  }
+  $displaymode = _mcdoolz_social_displaymode();
+  $iconpack = _mcdoolz_social_iconpack();
+  $networks = _mcdoolz_social_networks();
+  $filtered_links = array();
+  foreach ($links as $key => $link) {
+    $compare = strtolower($link['link']);
+    $compare = _strposa($compare, $networks);
+    if ($compare) {
+      // Eg: <i class="fa fa-reddit" aria-hidden="true"></i>.
+      $network_name = str_replace(array('.com', '.ca', '.net'), '', $compare);
+      $filtered_links[$compare] = array(
+        'link' => $link['link'],
+        'weight' => $link['weight'],
+        'classes' => "{$iconpack} {$iconpack}-{$network_name}",
+      );
+    }
+  }
+  $result = array(
+    '#markup' => theme('mcdoolz_social_block', array(
+      'links' => $filtered_links,
+      'iconpack' => $iconpack,
+      'displaymode' => $displaymode,
+    ))
+  );
+  return $result;
+}
+
+/**
+ * Helper sorts array by sub array value.
+ */
+function _sort_by_weight($a, $b) {
+  return $a["weight"] - $b["weight"];
+}
+
+/**
+ * Helper for in_array strpos.
+ *
+ * http://stackoverflow.com/questions/6284553/using-an-array-as-needles-in-strpos
+ */
+function _strposa($haystack, $needle, $offset = 0) {
+  if (!is_array($needle)) {
+    $needle = array($needle);
+  }
+  foreach ($needle as $query) {
+    // Stop on first true result.
+    if (strpos($haystack, $query, $offset) !== FALSE) {
+      return $query;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Invokes form_submit().
+ */
+function mcdoolz_social_block_configure_form_submit($form, $form_state) {
+  form_state_values_clean($form_state);
+  $values = $form_state['values'];
+  $links = $form_state['values']['mcdoolz_social_links'];
+  variable_set('mcdoolz_social_display', $values['mcdoolz_social_display']);
+  variable_set('mcdoolz_social_iconpack', $values['mcdoolz_social_iconpack']);
+  $links = array_filter($values['mcdoolz_social_links'], '_mcdoolz_social_empty');
+  usort($links, '_sort_by_weight');
+  foreach ($links as &$link) {
+    $parsed = parse_url($link['link']);
+    if (empty($parsed['scheme'])) {
+      $link['link'] = "https://" . $link['link'];
+    }
+    elseif ($parsed['scheme'] == 'http') {
+      $link['link'] = str_replace('http://', 'https://', $link['link']);
+    }
+  }
+  $links = serialize($links);
+  variable_set('mcdoolz_social_links', $links);
+  drupal_set_message(t('The configuration options have been saved.'));
+}
+
+/**
+ * Helper to filter empty network fields.
+ */
+function _mcdoolz_social_empty($var) {
+  return !empty($var['link']);
+}
