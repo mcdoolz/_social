@@ -22,7 +22,7 @@ function _mcdoolz_social_networks() {
  * Implements hook_menu().
  */
 function mcdoolz_social_menu() {
-  $items['admin/config/user-interface'] = array(
+  $items['admin/config/user-interface/mcdoolz_social'] = array(
     'title' => 'Social Links',
     'page callback' => 'mcdoolz_social_page',
     'access arguments' => array('access content'),
@@ -102,28 +102,26 @@ function mcdoolz_social_block_configure_form($form, &$form_state) {
     '#description' => 'Select the icon pack you wish to use.',
   );
 
-  if (!empty($links)) {
-    for ($i = 0; $i !== (count($links) + 1); $i++) {
-      $form['mcdoolz_social_links'][] = array(
-        'link' => array(
-          '#title' => 'Social Network',
-          '#title_display' => 'invisible',
-          '#type' => 'textfield',
-          '#default_value' => (!empty($links[$i])) ? check_plain($links[$i]['link']) : '',
+  for ($i = 0; $i !== (count($links) + 1); $i++) {
+    $form['mcdoolz_social_links'][] = array(
+      'link' => array(
+        '#title' => 'Social Network',
+        '#title_display' => 'invisible',
+        '#type' => 'textfield',
+        '#default_value' => (!empty($links[$i])) ? check_plain($links[$i]['link']) : '',
+      ),
+      'weight' => array(
+        '#size' => 3,
+        '#title' => t('Weight'),
+        '#delta' => 10,
+        '#title_display' => 'invisible',
+        '#attributes' => array(
+          'class' => array('item-row-weight')
         ),
-        'weight' => array(
-          '#size' => 3,
-          '#title' => t('Weight'),
-          '#delta' => 10,
-          '#title_display' => 'invisible',
-          '#attributes' => array(
-            'class' => array('item-row-weight')
-          ),
-          '#type' => 'textfield',
-          '#default_value' => (!empty($links[$i])) ? $links[$i]['weight'] : 0,
-        ),
-      );
-    }
+        '#type' => 'textfield',
+        '#default_value' => (!empty($links[$i])) ? $links[$i]['weight'] : 0,
+      ),
+    );
   }
 
   $form['add_social_link'] = array(
@@ -255,12 +253,18 @@ function _mcdoolz_social_iconpack() {
  */
 function _mcdoolz_social_contents($block) {
   $links = unserialize(variable_get('mcdoolz_social_links', NULL));
-  usort($links, '_sort_by_weight');
   if (empty($links)) {
-    return array(
-      '#markup' => t("You need to configure your social networks.")
-    );
+    global $user;
+    if (is_array($user->roles) && in_array('administrator', $user->roles)) {
+      return array(
+        '#markup' => l(t("You need to configure your social networks."), '/admin/config/user-interface/mcdoolz_social')
+      );
+    }
+    else {
+      return NULL;
+    }
   }
+  usort($links, '_sort_by_weight');
   $displaymode = _mcdoolz_social_displaymode();
   $iconpack = _mcdoolz_social_iconpack();
   $networks = _mcdoolz_social_networks();
