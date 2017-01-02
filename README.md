@@ -1,6 +1,27 @@
-# _social
-A social network link plug in module for Drupal 7; super simple to use.
+#MCDOOLZ Social
+==============
 
-If you have font awesome installed on your site, this module will use those classnames to provide an anchor wrapping an icon and label for each url pasted into the configuration page.
+Provides a multi field entry page for social networks.
+Step 1.  Enable module.
+Step 2.  Configure the module (http://www.example.com/admin/config/mcdoolz_social).
+Step 3.  Enter the URL's to your respective social networking pages.
+Step 4.  Select if you want labels, just labels or just icons.
+Step 5.  Place the block (http://www.example.com/admin/structure/blocks).
+Step 6.  ???
+Step 7.  Profit.
 
-For each link you wish displayed, copy and paste your social network URL into a field.  The code matches a font awesome classname to the url and if a match comes up, the network link is generated.  The rest is up to your CSS skills.  Don't like the icon on the right?  Float it left.  Want colour per network?  Each anchor and label is named for the network and the icon sits separate from the label so you can have different font sizes.
+The module attempts to match popular networks and assign an icon to them from
+the icon pack in use.
+It looks for the name of the network in your URL.
+The form doesn't validate your URL; it does convert to https.
+
+Code available at:
+
+* https://github.com/pereorga/drupal-module-boilerplate
+* https://drupal.org/sandbox/netol/drupal_module_boilerplate
+
+
+Author
+======
+
+Dooley P. <me@mcdoolz.com>
